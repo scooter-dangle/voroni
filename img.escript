@@ -52,7 +52,7 @@ options() ->
     {argument,
      "<bitstring>"},
     {description,
-     "Parse image directly from fake fake bitstring (ascii zeroes & ones)"}},
+     "Parse image directly from fake bitstring (ascii zeroes & ones)"}},
 
    {{switches,
      ["--binary"]},
