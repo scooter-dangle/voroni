@@ -2,6 +2,7 @@
 -compile(export_all).
 %%-export([binstring_to_bitstring/1, log/2]).
 
+%% NOTE: Requires json.beam from Yaws
 
 binstring_to_bitstring(String) ->
   binstring_to_bitstring(String, []).
@@ -82,4 +83,24 @@ bool_to_int(false) -> 0.
 
 highest_product_of_four(0) -> highest_product_of_four(1);
 highest_product_of_four(Int) -> Int + 3 - ((Int + 3) rem 4).
+
+list_to_string(List) ->
+  erlang:binary_to_list(
+    erlang:list_to_binary(List)
+   ).
+
+
+img_list_to_json(List) ->
+  Structify = fun (Token) -> {struct, [Token]} end,
+  NewList = lists:map(Structify, List),
+  list_to_string(
+    %% NOTE: Requires json.beam from Yaws
+    json:encode({array, NewList})
+   ).
+
+json_to_img_list(Json) ->
+  %% NOTE: Requires json.beam from Yaws
+  {ok, {array, List}} = json:decode_string(Json),
+  DeStructify = fun ({struct, [Token]}) -> Token end,
+  lists:map(DeStructify, List).
 

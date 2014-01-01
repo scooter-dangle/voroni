@@ -11,6 +11,10 @@ main(["--binary", String]) -> binary(String);
 main(["-b",          String]) -> main(["--bitstring", String]);
 main(["--bitstring", String]) -> bitstring(String);
 
+main(["--to_json",   String]) -> to_json(String);
+
+main(["--from_json", String]) -> from_json(String);
+
 main([])         -> main(["--help"]);
 main(["-h"])     -> main(["--help"]);
 main(["--help"]) -> help();
@@ -55,6 +59,20 @@ options() ->
      "Parse image directly from fake bitstring (ascii zeroes & ones)"}},
 
    {{switches,
+     ["--to_json"]},
+    {argument,
+     "<bitstring>"},
+    {description,
+     "\tNot yet implemented."}},
+
+   {{switches,
+     ["--from_json"]},
+    {argument,
+     "<json>"},
+    {description,
+     "\tNot yet implemented."}},
+
+   {{switches,
      ["--binary"]},
     {argument,
      "<bitstring>"},
@@ -79,3 +97,6 @@ bitstring(String) ->
   Img = img:parse(util:bitstring_to_binary(util:binstring_to_bitstring(String))),
   io:format("~w\n", [Img]).
 
+to_json(_) -> io:format("Not yet implemented.\n").
+
+from_json(_) -> io:format("Not yet implemented.\n").
