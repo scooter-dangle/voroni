@@ -28,7 +28,8 @@ help() ->
                       {argument, Argument},
                       {description, Description}}) ->
                     io:format("\t\t~s\s~s\t~s\n", [util:join(", ", Switches), Argument, Description])
-                end, options()).
+                end, options()),
+  io:format("\n").
 
 options() ->
   [
