@@ -10,18 +10,20 @@ end
 
 desc 'Compile Erlang source'
 FileList['*.erl'].ext.each do |x|
-    task erl: x
+    task erl: "#{x}.beam"
 end
 
 desc 'Compile Coffee source'
 FileList['*.coffee'].ext.each do |x|
-    task coffee: x
+    task coffee: "#{x}.js"
 end
 
+task json: 'json.beam'
+
 desc 'Get json.beam dependency'
-task :json do
+rule './json.beam' => '/usr/lib/yaws/ebin/json.beam' do
     file = FileList['/usr/lib/yaws/ebin/json.beam']
-    #raise "You'll need to add 'json.beam' manually...\nNot found.\n" if file.empty?
+    raise "You'll need to add 'json.beam' manually...\nNot found.\n" if file.empty?
     sh "cp #{file.first} ."
 end
 
