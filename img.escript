@@ -34,7 +34,7 @@ main_json("--bitstring", String) ->
 
 help() ->
   io:format("~n"),
-  io:format("\tUsage:\timg.escript\s[options] [file|bitstring]~n"),
+  io:format("\tUsage:\timg.escript [json] option [file|bitstring]~n"),
   io:format("~n"),
   io:format("\tOptions:~n"),
   lists:foreach(fun ({{switches, Switches},
@@ -46,6 +46,13 @@ help() ->
 
 options() ->
   [
+   {{switches,
+     ["json"]},
+    {argument,
+     "<opt> <target>"},
+    {description,
+     "\tUse with either --file or --bitstring to generate json"}},
+
    {{switches,
      ["-h", "--help"]},
     {argument,
@@ -66,13 +73,6 @@ options() ->
      "<bitstring>"},
     {description,
      "Parse image directly from fake bitstring (ascii zeroes & ones)"}},
-
-   {{switches,
-     ["json"]},
-    {argument,
-     "<opt> <target>"},
-    {description,
-     "\tUse with either --file or --bitstring to generate json"}},
 
    {{switches,
      ["--binary"]},
