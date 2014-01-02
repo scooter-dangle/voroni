@@ -18,15 +18,26 @@ FileList['*.coffee'].ext.each do |x|
     task coffee: "#{x}.js"
 end
 
-rule 'json.beam' do
-    file = FileList['/usr/lib/yaws/ebin/json.beam']
-    raise "You'll need to add 'json.beam' manually...\nNot found.\n" if file.empty?
-    sh "cp #{file.first} ."
+if File.exists? '/usr/lib/yaws/ebin/json.beam'
+    rule 'json.beam' do
+        sh "cp /usr/lib/yaws/ebin/json.beam ."
+    end
+else
+    rule 'json.beam' do
+        puts <<-MSG
+        Couldn't find json.beam at
+            /usr/lib/yaws/ebin/json.beam
+        Try installing erlang-yaws.
+        If it's already installed, json.beam
+        may be located in a different location
+        on your system, and you'll need to copy
+        it manually.
+        MSG
+    end
 end
 
 desc 'Get json.beam dependency'
 task json: 'json.beam'
-
 desc 'Make escript executable'
 task :chmod do
     File.chmod 0744, 'img.escript'
