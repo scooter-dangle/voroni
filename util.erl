@@ -89,8 +89,8 @@ list_to_string(List) ->
    ).
 
 img_list_to_json(List) ->
-  Structify = fun (Token) -> {struct, [Token]} end,
-  NewList = lists:map(Structify, List),
+  Arrayify = fun ({Token, Count}) -> {array, [erlang:atom_to_list(Token), Count]} end,
+  NewList = lists:map(Arrayify, List),
   list_to_string(
     %% NOTE: Requires json.beam from Yaws
     json:encode({array, NewList})
@@ -99,6 +99,6 @@ img_list_to_json(List) ->
 json_to_img_list(Json) ->
   %% NOTE: Requires json.beam from Yaws
   {ok, {array, List}} = json:decode_string(Json),
-  DeStructify = fun ({struct, [Token]}) -> Token end,
-  lists:map(DeStructify, List).
+  DeArrayify = fun ({array, [Token, Count]}) -> {erlang:list_to_atom(Token), Count} end,
+  lists:map(DeArrayify, List).
 
