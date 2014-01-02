@@ -21,7 +21,7 @@ end
 task json: 'json.beam'
 
 desc 'Get json.beam dependency'
-rule './json.beam' => '/usr/lib/yaws/ebin/json.beam' do
+rule 'json.beam' do
     file = FileList['/usr/lib/yaws/ebin/json.beam']
     raise "You'll need to add 'json.beam' manually...\nNot found.\n" if file.empty?
     sh "cp #{file.first} ."
