@@ -51,8 +51,6 @@ module.exports = do ->
         @read = (token_list=[]) ->
             (new @(token_list)).pixels
 
-        @actions = ['skip', 'tone', 'terminate']
-
         constructor: (token_list=[]) ->
             @pixels = []
             @counter = new Counter
@@ -64,17 +62,23 @@ module.exports = do ->
             @pixels
 
         read_one: ([action, argument]) ->
-            return 'error' if Screen.actions.indexOf(action) is -1
-
-            @[action](argument)
-            @pixels
+            # The following nonsense is necessary in case this is run
+            # through something like Google Closure
+            switch action
+                when 'skip'      then      @skip argument
+                when 'tone'      then      @tone argument
+                when 'terminate' then @terminate argument
+                else 'error'
 
         skip: (count) ->
             @counter.add count
+            null
 
         tone: (color) ->
             {x, y} = @counter.add 1
             @pixels.push {x, y, color}
+            {x, y, color}
 
         terminate: (_) ->
             @read_one = () -> @pixels
+            null
