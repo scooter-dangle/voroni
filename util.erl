@@ -51,9 +51,6 @@ bitstring_to_binary(Bitstring) ->
   Padsize = (8 - (erlang:bit_size(Bitstring) rem 8)) rem 8,
   <<Bitstring/bitstring, 0:Padsize>>.
 
-join(Joiner, Strings) ->
-  reduce(fun (A, B) -> A ++ Joiner ++ B end, Strings).
-
 reduce(_, [A])  -> reduce(nothing, [], A);
 reduce(Fun, [A, B | Tail]) ->
   reduce(Fun, Tail, Fun(A, B)).

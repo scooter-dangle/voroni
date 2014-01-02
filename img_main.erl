@@ -37,7 +37,7 @@ help() ->
   lists:foreach(fun ({{switches, Switches},
                       {argument, Argument},
                       {description, Description}}) ->
-                    io:format("\t\t~s\s~s\t~s~n", [util:join(", ", Switches), Argument, Description])
+                    io:format("\t\t~s\s~s\t~s~n", [string:join(Switches, ", "), Argument, Description])
                 end, options()),
   io:format("~n").
 
