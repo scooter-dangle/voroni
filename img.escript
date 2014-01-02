@@ -4,36 +4,45 @@
 %-mode(compile).
 
 main(["-f",     File]) -> main(["--file", File]);
-main(["--file", File]) -> parse_file(File);
+main(["--file", File]) -> erlang_out(parse_file(File));
 
-main(["--binary", String]) -> binary(String);
+main(["--binary", String]) -> string_out(binary(String));
 
 main(["-b",          String]) -> main(["--bitstring", String]);
-main(["--bitstring", String]) -> bitstring(String);
+main(["--bitstring", String]) -> erlang_out(bitstring(String));
 
-main(["--to_json",   String]) -> to_json(String);
-
-main(["--from_json", String]) -> from_json(String);
+main(["json", Method, String]) -> string_out(main_json(Method, String));
 
 main([])         -> main(["--help"]);
 main(["-h"])     -> main(["--help"]);
 main(["--help"]) -> help();
 
 main(_) ->
-  io:format(standard_error, "Unknown option:\tRun with --help for usage\n", []).
+  io:format(standard_error, "Unknown option:\tRun with --help for usage~n", []).
+
+
+main_json("-f",     File) -> main_json("--file", File);
+main_json("--file", File) ->
+  util:img_list_to_json(
+    parse_file(File));
+
+main_json("-b",          String) -> main_json("--bitstring", String);
+main_json("--bitstring", String) ->
+  util:img_list_to_json(
+    bitstring(String)).
 
 
 help() ->
-  io:format("\n"),
-  io:format("\tUsage:\timg.escript\s[options] [file|bitstring]\n"),
-  io:format("\n"),
-  io:format("\tOptions:\n"),
+  io:format("~n"),
+  io:format("\tUsage:\timg.escript\s[options] [file|bitstring]~n"),
+  io:format("~n"),
+  io:format("\tOptions:~n"),
   lists:foreach(fun ({{switches, Switches},
                       {argument, Argument},
                       {description, Description}}) ->
-                    io:format("\t\t~s\s~s\t~s\n", [util:join(", ", Switches), Argument, Description])
+                    io:format("\t\t~s\s~s\t~s~n", [util:join(", ", Switches), Argument, Description])
                 end, options()),
-  io:format("\n").
+  io:format("~n").
 
 options() ->
   [
@@ -59,18 +68,11 @@ options() ->
      "Parse image directly from fake bitstring (ascii zeroes & ones)"}},
 
    {{switches,
-     ["--to_json"]},
+     ["json"]},
     {argument,
-     "<bitstring>"},
+     "<opt> <target>"},
     {description,
-     "\tNot yet implemented."}},
-
-   {{switches,
-     ["--from_json"]},
-    {argument,
-     "<json>"},
-    {description,
-     "\tNot yet implemented."}},
+     "\tUse with either --file or --bitstring to generate json"}},
 
    {{switches,
      ["--binary"]},
@@ -83,20 +85,25 @@ options() ->
 parse_file(File) ->
   case file:read_file(File) of
     {error, enoent} ->
-      io:format(standard_error, "File not found:\t~s\n", [File]);
+      io:format(standard_error, "File not found:\t~s~n", [File]),
+      "";
     {ok, Bitstring} ->
-      Img = img:parse(Bitstring),
-      io:format("~w\n", [Img])
+      img:parse(Bitstring)
   end.
 
 binary(String) ->
-  Bitstring = erlang:binary_to_list(util:bitstring_to_binary(util:binstring_to_bitstring(String))),
-  io:format("~s\n", [Bitstring]).
+  erlang:binary_to_list(
+    util:bitstring_to_binary(
+      util:binstring_to_bitstring(String))).
 
 bitstring(String) ->
-  Img = img:parse(util:bitstring_to_binary(util:binstring_to_bitstring(String))),
-  io:format("~w\n", [Img]).
+  img:parse(
+    util:bitstring_to_binary(
+      util:binstring_to_bitstring(String))).
 
-to_json(_) -> io:format("Not yet implemented.\n").
+string_out("")     -> ok;
+string_out(String) -> io:format("~s~n", [String]).
 
-from_json(_) -> io:format("Not yet implemented.\n").
+erlang_out("")     -> ok;
+erlang_out(String) -> io:format("~p~n", [String]).
+

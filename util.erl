@@ -21,7 +21,6 @@ bin_to_list( <<>> , List) -> lists:reverse(List);
 bin_to_list(<<X:1, Rest/bitstring>>, List) ->
     bin_to_list(Rest, [X|List]).
 
-
 list_to_bin(List) -> list_to_bin(lists:reverse(List), <<>>).
 
 list_to_bin([], Stream) -> Stream;
@@ -88,7 +87,6 @@ list_to_string(List) ->
   erlang:binary_to_list(
     erlang:list_to_binary(List)
    ).
-
 
 img_list_to_json(List) ->
   Structify = fun (Token) -> {struct, [Token]} end,
