@@ -38,6 +38,7 @@ end
 
 desc 'Get json.beam dependency'
 task json: 'json.beam'
+
 desc 'Make escript executable'
 task :chmod do
     File.chmod 0744, 'img.escript'
@@ -48,3 +49,4 @@ multitask compile: [:erl, :coffee]
 
 desc 'All the things'
 multitask default: [:compile, :json, :chmod]
+
