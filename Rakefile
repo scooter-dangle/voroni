@@ -27,13 +27,10 @@ end
 desc 'Get json.beam dependency'
 task json: 'json.beam'
 
-rule 'img.escript' do
-    puts 'chmod'
+desc 'Make escript executable'
+task :chmod do
     File.chmod 0744, 'img.escript'
 end
-
-desc 'Make escript executable'
-task chmod: 'img.escript'
 
 desc 'Compile all files'
 multitask compile: [:erl, :coffee]
