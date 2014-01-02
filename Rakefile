@@ -10,12 +10,12 @@ end
 
 desc 'Compile Erlang source'
 FileList['*.erl'].ext.each do |x|
-    task erl: "#{x}.beam"
+    multitask erl: "#{x}.beam"
 end
 
 desc 'Compile Coffee source'
 FileList['*.coffee'].ext.each do |x|
-    task coffee: "#{x}.js"
+    multitask coffee: "#{x}.js"
 end
 
 if File.exists? '/usr/lib/yaws/ebin/json.beam'
