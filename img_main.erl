@@ -2,6 +2,23 @@
 -compile(export_all).
 
 
+main(["-f",     File]) -> main(["--file", File]);
+main(["--file", File]) -> erlang_out(parse_file(File));
+
+main(["--binary", String]) -> string_out(binary(String));
+
+main(["-b",          String]) -> main(["--bitstring", String]);
+main(["--bitstring", String]) -> erlang_out(bitstring(String));
+
+main(["json", Method, String]) -> string_out(main_json(Method, String));
+
+main([])         -> main(["--help"]);
+main(["-h"])     -> main(["--help"]);
+main(["--help"]) -> help();
+
+main(_) ->
+  io:format(standard_error, "Unknown option:\tRun with --help for usage~n", []).
+
 main_json("-f",     File) -> main_json("--file", File);
 main_json("--file", File) ->
   util:img_list_to_json(
