@@ -43,6 +43,10 @@ class Integer
 end
 
 class Array
+    # Used so that a point such as p = [x, y] can
+    # store the properties necessary for conversion
+    # to a stream
+    attr_accessor :rgb, :skip
     # white
     BACKGROUND = [255, 255, 255]
     R, B, G = BACKGROUND
@@ -99,7 +103,8 @@ png = ChunkyPNG::Image.from_file FileList['*.png'].first
 width  = png.dimension.width
 height = png.dimension.height
 
-puts 'constructing output array for #to_rgba'
+puts 'constructing output array for #to_rgb'
+start = Time.now
 # Is the following faster than first initializing
 # a blank out array?
 pixels = Array.new(width) {|x|
@@ -199,8 +204,7 @@ end
 
 #threads = []
 
-start = Time.now
-puts 'transferring pixels to target array with #to_rgba'
+#puts 'transferring pixels to target array with #to_rgb'
 #thread_count = 1
 #thread_chunk_size = (width / thread_count.to_f).ceil
 #(0...width).each_slice(thread_chunk_size) do |chunk|
@@ -223,13 +227,28 @@ puts 'transferring pixels to target array with #to_rgba'
 
 puts "Time elapsed during transfer:\t#{Time.now - start}"
 
-coörds = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
-    [(x / 100) * width, (y / 100) * height]
-}.map {|(x, y)|
-    [:tone, pixels.color(x, y)]
+puts "Calculating Voronoi diagram 1"
+start = Time.now
+co_ords = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
+    out = [(x / 100.0) * width, (y / 100.0) * height]
+    out.rgb = pixels.color(x, y)
+    out.skip = false
+    out
 }
 
-coörds.pry
+points = co_ords.map {|point| RubyVor::Point.new *point }
+comp = RubyVor::VDDT::Computation.from_points points
+nn_graph = comp.nn_graph
+puts "Completed Voronoi diagram 1 calculation in #{Time.now - start} seconds"
+
+#coörds = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
+#    [(x / 100) * width, (y / 100) * height]
+#}.map {|(x, y)|
+#    [:tone, pixels.color(x, y)]
+#}
+
+
+binding.pry
 exit
 
 class Array
