@@ -50,26 +50,56 @@ def out.color x, y
     #                                                             #
     #              o = (x, y) is the point in question.           #
     #                                                             #
-    #              x_int.pred       (x_int - 0.5)          x_int  #
-    #                 v                   v                  v    #
-    #   y_int.pred > a1................x..|..................b1   #
-    #                 .                |                     .    #
-    #                 .                |                     .    #
-    #                 .   b2_fact      |      a2_fact        .    #
-    #                 .             y2_fact                  .    #
-    #                 .                |                     .    #
-    #                 .                |                     .    #
-    #                 y---x2_fact------o------x1_fact--------.    #
-    #                 .                |                     .    #
-    # (y_int - 0.5) > -                |                     .    #
-    #                 .             y1_fact                  .    #
-    #                 .                |                     .    #
-    #                 .   b2_fact      |      a1_fact        .    #
-    #                 .                |                     .    #
-    #                 .                |                     .    #
-    #                 .                |                     .    #
-    #                 .                |                     .    #
-    #        y_int > a2......................................b2   #
+    #              The entire square of the diagram below would   #
+    #              have the color of the a1 co-ordinate when in   #
+    #              the png image. However, with svg we're working #
+    #              with a percentage-based co-ordinate system     #
+    #              rather than an array co-ordinate system (i.e., #
+    #              we'll have an exact center point of x = 50%    #
+    #              and y = 50% in svg, whereas in a png array,    #
+    #              we'd only have an exact mid-point if the       #
+    #              height or width of the pixel matrix is an odd  #
+    #              number). So we'd only use the color located at #
+    #              a1 without modification if our point were      #
+    #              exactly                                        #
+    #                  o = (x_int.pred + 0.5, y_int.pred + 0.5).  #
+    #              This point is noted by a '%' mark on the       #
+    #              diagram below.                                 #
+    #                                                             #
+    #              Note: Bounds checking is obviated by using     #
+    #              out.pad!, which first appends the bottom       #
+    #              border and right border to the bottom and      #
+    #              right of the pixel map, so that something      #
+    #              like o = (1.75, 1.75) will work for a pixel    #
+    #              map with respective height and widths of 2     #
+    #              pixels. Next, out.pad! appends the top and     #
+    #              left border to the bottom and right sides,     #
+    #              respectively, so that when x or y are less     #
+    #              than 0.5 (so that x_int.pred or y_int.pred     #
+    #              are -1) calling out.atat(-1, _) or             #
+    #              out.atat(_, -1) will still access the left or  #
+    #              top pixel (respectively). Does that make       #
+    #              sense?                                         #
+    #                                                             #
+    #                                                             #
+    #              x_int.pred     (x_int - 0.5)          x_int    #
+    #                 v                 v                  v      #
+    #   y_int.pred > a1-----------------|--x--------------b1      #
+    #                 |                    |              |       #
+    #                 |                 .  |              |       #
+    #                 |      b2_fact       |    a2_fact   |       #
+    #                 |                 .  |              |       #
+    #                 |                 y2_fact           |       #
+    #                 |                 .  |              |       #
+    # (y_int - 0.5) > -   .   .   .   . % .|  .   .   .   |       #
+    #                 |                 .  |              |       #
+    #                 y------x2_fact-------o----x1_fact---|       #
+    #                 |                 .  |              |       #
+    #                 |                 y1_fact           |       #
+    #                 |      b1_fact    .  |    a1_fact   |       #
+    #                 |                    |              |       #
+    #                 |                 .  |              |       #
+    #        y_int > a2-----------------------------------b2      #
     #                                                             #
     ###############################################################
     colors.shift.zip(*colors) do |a1, b1, a2, b2|
@@ -80,6 +110,10 @@ def out.color x, y
     out
 end
 
+# See also the diagram in out.color...having called out.pad! first is
+# necessary for out.color to work. (But out.pad! can only be called
+# after out has finished being filled with the colors from the png
+# image.)
 def out.pad!
     each {|column| column.push column.last, column.first }
     push last, first
