@@ -34,26 +34,44 @@ end
 def out.color x, y
     (x_int, y_int) = [x.round, y.round]
     (x1_fact, x2_fact,
-     y1_fact, y2_fact) = [x - x_int + 0.5, 1 - (x - x_int + 0.5),
-                          y - y_int + 0.5, 1 - (y - y_int + 0.5)]
+     y1_fact, y2_fact) = [1 - (x - x_int + 0.5), x - x_int + 0.5,
+                          1 - (y - y_int + 0.5), y - y_int + 0.5]
 
     (a1_fact, b1_fact,
-     a2_fact, b2_fact) = [x2_fact * y2_fact, x1_fact * y2_fact,
-                          x2_fact * y1_fact, x1_fact * y1_fact]
+     a2_fact, b2_fact) = [x1_fact * y1_fact, x2_fact * y1_fact,
+                          x1_fact * y2_fact, x2_fact * y2_fact]
 
     colors = [atat(x_int.pred, y_int.pred), atat(x_int, y_int.pred),
               atat(x_int.pred, y_int),      atat(x_int, y_int)]
 
     out = []
 
-    #############
-    #    a   b
-    #
-    # 1  a1  b1
-    #
-    # 2  a2  b2
-    #
-    #############
+    ###############################################################
+    #                                                             #
+    #              o = (x, y) is the point in question.           #
+    #                                                             #
+    #              x_int.pred       (x_int - 0.5)          x_int  #
+    #                 v                   v                  v    #
+    #   y_int.pred > a1................x..|..................b1   #
+    #                 .                |                     .    #
+    #                 .                |                     .    #
+    #                 .   b2_fact      |      a2_fact        .    #
+    #                 .             y2_fact                  .    #
+    #                 .                |                     .    #
+    #                 .                |                     .    #
+    #                 y---x2_fact------o------x1_fact--------.    #
+    #                 .                |                     .    #
+    # (y_int - 0.5) > -                |                     .    #
+    #                 .             y1_fact                  .    #
+    #                 .                |                     .    #
+    #                 .   b2_fact      |      a1_fact        .    #
+    #                 .                |                     .    #
+    #                 .                |                     .    #
+    #                 .                |                     .    #
+    #                 .                |                     .    #
+    #        y_int > a2......................................b2   #
+    #                                                             #
+    ###############################################################
     colors.shift.zip(*colors) do |a1, b1, a2, b2|
         out << ((a1 * a1_fact) + (b1 * b1_fact) +
                 (a2 * a2_fact) + (b2 * b2_fact)).round
