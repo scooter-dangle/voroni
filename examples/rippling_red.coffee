@@ -2,6 +2,10 @@
 # d3 Voronoi example
 
 d3 = require 'd3'
+# NOTE: The examples/rippling_red.html output was produced
+# before the @rotation attribute was added to the Screen
+# class. Running this example again will not yield exactly
+# the same result. :(
 screen = require './screen'
 
 w = 800
