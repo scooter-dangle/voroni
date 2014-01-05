@@ -1,8 +1,11 @@
+# Screen class object is returned from the function and assigned to
+# module.exports
 module.exports = do ->
     class Counter
         constructor: (
             @total_count=0,
             @layer=0,
+            @rotation=3,
             @count_until_new_layer=1,
             @count_until_new_row=1,
             @rows=1, @columns=1,
@@ -14,7 +17,7 @@ module.exports = do ->
         ) ->
 
         add: (count = 1) ->
-            out = {@x, @y}
+            out = @rotate {@x, @y}
             @increment() for _ in [1..count]
             out
 
@@ -36,16 +39,31 @@ module.exports = do ->
 
         new_layer: ->
             @layer += 1
-            @rows = @columns = Math.pow 2, @layer
+            @rotation = (@rotation + 1) % 4
+            @rows =
+                @columns =
+                    Math.pow 2, @layer
             @count_until_new_row = @columns
             @row = @rows - 1 unless @row is 0
             @y_dir *= -1
-            @x_dir = 1
+            @x_dir  =  1
             @count_until_new_layer = @rows * @columns
             @[attr] /= 2 for attr in ['x_incr', 'y_incr', 'x_base', 'y_base']
             @x = @x_base + (@column * @x_incr)
             @y = @y_base + (@row    * @y_incr)
 
+        rotate: ({x, y}) ->
+            switch @rotation
+                when 0 then {x, y}
+                when 1
+                    x: y
+                    y: 100.0 - x
+                when 2
+                    x: 100.0 - x
+                    y: 100.0 - y
+                when 3
+                    x: 100.0 - y
+                    y: x
 
     class Screen
         @read = (token_list=[]) ->
@@ -82,3 +100,4 @@ module.exports = do ->
         terminate: (_) ->
             @read_one = () -> @pixels
             null
+

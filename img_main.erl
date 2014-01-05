@@ -1,4 +1,5 @@
 -module(img_main).
+-import(lists, [foreach/2]).
 -compile(export_all).
 
 
@@ -34,7 +35,7 @@ help() ->
   io:format("\tUsage:\timg.escript [json] option [file|bitstring]~n"),
   io:format("~n"),
   io:format("\tOptions:~n"),
-  lists:foreach(fun ({{switches, Switches},
+  foreach(fun ({{switches, Switches},
                       {argument, Argument},
                       {description, Description}}) ->
                     io:format("\t\t~s\s~s\t~s~n", [string:join(Switches, ", "), Argument, Description])
