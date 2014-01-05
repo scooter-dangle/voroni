@@ -196,6 +196,40 @@ end
 puts "trying to reduce the size just a bit"
 compress_1[coörds]
 
+# Any transparency turns out poorly due to imprecision in the stroke width
+# of the voronoi polygons...if you don't have at least some stroke width,
+# you end up with uncovered gaps between polygons, but if you have enough
+# stroke width to avoid gaps, you'll have some overlap between the polygons,
+# which is fine unless the strokes are opaque. If they're partially transparent,
+# they add together to create geometric paths that stand out from the image. :(
+puts "converting zero-tones to opaque all-whites and removing all transparency"
+coörds.select do |(action, _)|
+    action == :tone
+end.each do |(_, rgba)|
+    rgba.fill 255 if rgba == [0,0,0,0]
+end.reject do |(_, (*_, a))|
+    # Filter out out any fully opaque cells
+    # before next round
+    a == 255
+end.each do |(_, rgba)|
+    # Here we're operating on any fully or partially
+    # transparent cells. Assuming a white background,
+    # we'll scale their rgb values toward 255 by the
+    # degree toward which we need to modify their
+    # 'a' (opacity) value to bring it to 255
+    r, g, b, a = rgba
+    conversion_factor = (255 - a) / 255.0
+
+    r += ((255 - r) * conversion_factor).round
+    g += ((255 - g) * conversion_factor).round
+    b += ((255 - b) * conversion_factor).round
+
+    r, g, b = [r, 255].min,
+              [g, 255].min,
+              [b, 255].min
+
+    rgba.replace [r, g, b, 255]
+end
 
 coörd_string = "module.exports = #{JSON.dump coörds}"
 IO.write 'co-ords_img.js', coörd_string
