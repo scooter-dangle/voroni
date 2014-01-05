@@ -1,37 +1,117 @@
+# encoding: utf-8
 puts 'loading requirements'
 require 'chunky_png'
 require 'rake'
 require 'json'
-#require 'pry'
+require 'pry'
+# Not yet used
+require 'ruby_vor'
+
+class Numeric
+    def opaque?
+        self == 255
+    end
+
+    def transparent?
+        zero?
+    end
+
+    def bound min, max
+        return max if self > max
+        return min if self < min
+        self
+    end
+end
 
 class Integer
     def to_rgba
-        return [0, 0, 0, 0] if zero?
+        # If integer is zero, then alpha channel is zero
+        # and the pixel is fully transparent. Assuming a
+        # white background, then, the pixel will render
+        # as entirely white.
+        return [Array::R, Array::B, Array::G, 255] if transparent?
 
         to_s(16).rjust(8, ?0)
             .chars.each_slice(2)
             .map(&:join)
             .map {|x| x.to_i 16 }
     end
+
+    def to_rgb
+        to_rgba.from_rgba_to_rgb
+    end
+end
+
+class Array
+    # white
+    BACKGROUND = [255, 255, 255]
+    R, B, G = BACKGROUND
+
+    def atat x, y
+        at(x).at(y)
+    end
+
+    def from_rgba_to_rgb
+        r, g, b, a = self
+        return Array::BACKGROUND.dup if a.transparent?
+        return [r, g, b] if a.opaque?
+
+        conversion_factor = (255 - a) / 255.0
+
+        # Need to double-check this method for non-white
+        # backgrounds
+        r += ((Array::R - r) * conversion_factor).round.bound 0, 255
+        g += ((Array::G - g) * conversion_factor).round.bound 0, 255
+        b += ((Array::B - b) * conversion_factor).round.bound 0, 255
+
+        [r, g, b]
+    end
+
+    def rgb_distance_from( (r2, g2, b2) )
+        r1, g1, b1 = self
+        (r1 - r2).abs + (g1 - g2).abs + (b1 - b2).abs
+    end
+
+    def euclidean_distance_from ary
+        out = 0
+        zip(ary) {|a, b| out += (a - b)**2 }
+        Math.sqrt out
+    end
+
+    def pad!
+        push last, first
+    end
+
+    # See also the diagram in out.color...having called out.pad! first is
+    # necessary for out.color to work. (But out.pad! can only be called
+    # after out has finished being filled with the colors from the png
+    # image.)
+    def matrix_pad!
+        each &:pad!
+        pad!
+    end
 end
 
 
 puts 'loading png'
-png = nil
 png = ChunkyPNG::Image.from_file FileList['*.png'].first
 
 width  = png.dimension.width
 height = png.dimension.height
 
 puts 'constructing output array for #to_rgba'
-out = nil
-out = Array.new(width) { Array.new(height) { [0,0,0,0] } }
+# Is the following faster than first initializing
+# a blank out array?
+pixels = Array.new(width) {|x|
+    Array.new(height) {|y|
+        png[x, y].to_rgb
+    }
+}
+pixels.matrix_pad!
 
-def out.atat x, y
-    at(x).at(y)
-end
+# out = Array.new(width) { Array.new(height) { [0,0,0,0] } }
 
-def out.color x, y
+def pixels.color x, y
     (x_int, y_int) = [x.round, y.round]
     (x1_fact, x2_fact,
      y1_fact, y2_fact) = [1 - (x - x_int + 0.5), x - x_int + 0.5,
@@ -41,8 +121,12 @@ def out.color x, y
      a2_fact, b2_fact) = [x1_fact * y1_fact, x2_fact * y1_fact,
                           x1_fact * y2_fact, x2_fact * y2_fact]
 
-    colors = [atat(x_int.pred, y_int.pred), atat(x_int, y_int.pred),
-              atat(x_int.pred, y_int),      atat(x_int, y_int)]
+    # There's nothing special about the head color vs the tail colors...
+    # We'll be zipping them all together, but we need a target array
+    # upon which to call the Array#zip method
+    (head_color,
+    *tail_colors) = [atat(x_int.pred, y_int.pred), atat(x_int, y_int.pred),
+                     atat(x_int.pred, y_int),      atat(x_int, y_int)]
 
     out = []
 
@@ -102,57 +186,51 @@ def out.color x, y
     #        y_int > a2-----------------------------------b2      #
     #                                                             #
     ###############################################################
-    colors.shift.zip(*colors) do |a1, b1, a2, b2|
-        out << ((a1 * a1_fact) + (b1 * b1_fact) +
-                (a2 * a2_fact) + (b2 * b2_fact)).round
+    head_color.zip(*tail_colors) do |a1, b1, a2, b2|
+        # This operation is called many times...it would be good
+        # to know if using Array#inject vs just using plus signs
+        # adds a performance penalty.
+        out << [(a1 * a1_fact), (b1 * b1_fact),
+                (a2 * a2_fact), (b2 * b2_fact)].inject(:+).round
     end
 
     out
 end
 
-# See also the diagram in out.color...having called out.pad! first is
-# necessary for out.color to work. (But out.pad! can only be called
-# after out has finished being filled with the colors from the png
-# image.)
-def out.pad!
-    each {|column| column.push column.last, column.first }
-    push last, first
-end
-
-out.pad!
-
-
 #threads = []
 
 start = Time.now
 puts 'transferring pixels to target array with #to_rgba'
-thread_chunk_size = 800
-(0...width).each_slice(thread_chunk_size) do |chunk|
+#thread_count = 1
+#thread_chunk_size = (width / thread_count.to_f).ceil
+#(0...width).each_slice(thread_chunk_size) do |chunk|
     # Threading is only worth it with much larger images (in which case,
     # it's still only worth it if you're using jruby or possibly rubinius)
     #puts "Starting thread to manage #{chunk.first} through #{chunk.last}"
     #threads << Thread.new do
-        chunk.each do |x|
-            height.times {|y|
-                out.atat(x, y).replace png[x, y].to_rgba
-            }
-        end
+        #chunk.each do |x|
+            #height.times {|y|
+                #pixels.atat(x, y).replace png[x, y].to_rgba
+            #}
+        #end
         #puts "Finished #{chunk.first} through #{chunk.last}"
     #end
-end
+#end
 
 #threads.each &:join
 #threads.clear
 
-out.pad!
 
 puts "Time elapsed during transfer:\t#{Time.now - start}"
 
 coörds = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
     [(x / 100) * width, (y / 100) * height]
 }.map {|(x, y)|
-    [:tone, out.color(x, y)]
+    [:tone, pixels.color(x, y)]
 }
+
+coörds.pry
+exit
 
 class Array
     def zero_tone?
