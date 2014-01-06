@@ -8,7 +8,7 @@ lister = require './co-ords_img.js'
 w = 800
 h = 600
 
-to_rgba = ([r, g, b, a]) -> "rgba(#{r},#{g},#{b},#{a / 255})"
+to_rgba = ([r, g, b, a]) -> "rgb(#{r},#{g},#{b})"
 
 vertices = screen.read(lister).map ({x, y, color}) ->
   out = [(x / 100) * w, (y / 100) * h]
@@ -41,5 +41,5 @@ svg.selectAll("path")
   .attr("d", mz)
 
 svg_document  = d3.select("#chart").html()
-html_document = "<!doctype html><html><style>path {stroke-width: 0.55px;}</style><head></head><body><div id='chart'>#{svg_document}</div></body></html>"
+html_document = "<!doctype html><html><style>path {stroke-width: 0.51px;}</style><head></head><body><div id='chart'>#{svg_document}</div></body></html>"
 console.log html_document

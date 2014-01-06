@@ -231,8 +231,10 @@ puts "Calculating Voronoi diagram 1"
 start = Time.now
 co_ords = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
     out = [(x / 100.0) * width, (y / 100.0) * height]
-    out.rgb = pixels.color(x, y)
-    out.skip = false
+    # Make sure we sample with *new* x and y
+    out.rgb = pixels.color *out
+    out.skip = 0
+
     out
 }
 
@@ -241,14 +243,69 @@ comp = RubyVor::VDDT::Computation.from_points points
 nn_graph = comp.nn_graph
 puts "Completed Voronoi diagram 1 calculation in #{Time.now - start} seconds"
 
+
+puts "Checking neighbors for redundance"
+start = Time.now
+
+initial_skip = 0
+emigrants = []
+
+nn_graph.size.times do |i|
+    point = co_ords.at i
+    neighbor_co_ords = nn_graph.at i
+
+    emigrants.push i if neighbor_co_ords.all? {|j|
+        point.rgb == co_ords.at(j).rgb
+    }
+end
+
+# In case `emigrants.include? 0`, add a dummy point to the very
+# end of co_ords Array so that `co_ords.at(0 - 1)` to increment
+# its skip counter won't modify the *actual* last point in co_ords,
+# which would be confusing. (I'm hoping that using this dummy
+# point is *less* confusing than that, but it might not be...
+# it's still pretty confusing.) :(
+# At the very end of the emigrant removal operation, we'll pop
+# off that dummy point and make a note of its skip count.
+dummy_point = []
+dummy_point.skip = initial_skip
+co_ords.push dummy_point
+
+emigrants.reverse_each do |i|
+    # Why look at that! I think the neighbor's moving out...
+    # I'll make a note of it.
+    co_ords.at(i.pred).skip += co_ords.at(i).skip + 1
+    # I am naught but the mirror image of my neighbors.
+    # Will I quit this place and abide in it no more! :(
+    co_ords.delete_at i
+end
+
+# G'bye, dummy_point!
+initial_skip = co_ords.pop.skip
+
+puts "Check finished in #{Time.now - start} seconds"
+
 #coörds = JSON.parse(IO.read 'co-ords.json').map {|(x, y)|
 #    [(x / 100) * width, (y / 100) * height]
 #}.map {|(x, y)|
 #    [:tone, pixels.color(x, y)]
 #}
 
+puts "Dumping out co-ords to Json"
+co_ords.map! do |point|
+    tone = [:tone, [*point.rgb, 255]]
+    skip = [:skip, point.skip]
+    [tone, skip]
+end.flatten!(1)
 
-binding.pry
+co_ords.unshift [:skip, initial_skip]
+
+co_ords.delete [:skip, 0]
+
+co_ords_string = "module.exports = #{JSON.dump co_ords}"
+IO.write 'co-ords_img.js', co_ords_string
+
+
 exit
 
 class Array
@@ -262,36 +319,36 @@ class Array
 end
 
 
-# See slow_compress for more idiomatic reading of
-# what compress_1 does
-compress_1 = ->(list) do
-    skip = [:skip, 1]
-    initial_chunk = list[0, 4].map(&:last).map(&:last).map(&:zero?)
-    l1, l2, candidate, r1, r2 = [false, *initial_chunk]
+## See slow_compress for more idiomatic reading of
+## what compress_1 does
+#compress_1 = ->(list) do
+#    skip = [:skip, 1]
+#    initial_chunk = list[0, 4].map(&:last).map(&:last).map(&:zero?)
+#    l1, l2, candidate, r1, r2 = [false, *initial_chunk]
+#
+#    for i in (4...(list.length)) do
+#        l1, l2,        candidate, r1, r2 =
+#        l2, candidate, r1,        r2, (list.at(i).at(1).at(3) == 0)
+#
+#        list[i - 2] = skip if
+#            l1 and l2 and candidate and r1 and r2
+#    end
+#
+#    list
+#end
 
-    for i in (4...(list.length)) do
-        l1, l2,        candidate, r1, r2 =
-        l2, candidate, r1,        r2, (list.at(i).at(1).at(3) == 0)
+## A *much* slower but terser version of compress_1 is as follows
+#slow_compress = ->(list) do
+#    (list.length - 5).times do |i|
+#        list[i + 2] = [:skip, 1] if
+#            list[i, 5].all?(&:zero_tone_or_skip?)
+#    end
+#
+#    list
+#end
 
-        list[i - 2] = skip if
-            l1 and l2 and candidate and r1 and r2
-    end
-
-    list
-end
-
-# A *much* slower but terser version of compress_1 is as follows
-slow_compress = ->(list) do
-    (list.length - 5).times do |i|
-        list[i + 2] = [:skip, 1] if
-            list[i, 5].all?(&:zero_tone_or_skip?)
-    end
-
-    list
-end
-
-puts "trying to reduce the size just a bit"
-compress_1[coörds]
+#puts "trying to reduce the size just a bit"
+#compress_1[coörds]
 
 # Any transparency turns out poorly due to imprecision in the stroke width
 # of the voronoi polygons...if you don't have at least some stroke width,
@@ -299,35 +356,35 @@ compress_1[coörds]
 # stroke width to avoid gaps, you'll have some overlap between the polygons,
 # which is fine unless the strokes are opaque. If they're partially transparent,
 # they add together to create geometric paths that stand out from the image. :(
-puts "converting zero-tones to opaque all-whites and removing all transparency"
-coörds.select do |(action, _)|
-    action == :tone
-end.each do |(_, rgba)|
-    rgba.fill 255 if rgba == [0,0,0,0]
-end.reject do |(_, (*_, a))|
-    # Filter out out any fully opaque cells
-    # before next round
-    a == 255
-end.each do |(_, rgba)|
-    # Here we're operating on any fully or partially
-    # transparent cells. Assuming a white background,
-    # we'll scale their rgb values toward 255 by the
-    # degree toward which we need to modify their
-    # 'a' (opacity) value to bring it to 255
-    r, g, b, a = rgba
-    conversion_factor = (255 - a) / 255.0
+#puts "converting zero-tones to opaque all-whites and removing all transparency"
+#coörds.select do |(action, _)|
+#    action == :tone
+#end.each do |(_, rgba)|
+#    rgba.fill 255 if rgba == [0,0,0,0]
+#end.reject do |(_, (*_, a))|
+#    # Filter out out any fully opaque cells
+#    # before next round
+#    a == 255
+#end.each do |(_, rgba)|
+#    # Here we're operating on any fully or partially
+#    # transparent cells. Assuming a white background,
+#    # we'll scale their rgb values toward 255 by the
+#    # degree toward which we need to modify their
+#    # 'a' (opacity) value to bring it to 255
+#    r, g, b, a = rgba
+#    conversion_factor = (255 - a) / 255.0
+#
+#    r += ((255 - r) * conversion_factor).round
+#    g += ((255 - g) * conversion_factor).round
+#    b += ((255 - b) * conversion_factor).round
+#
+#    r, g, b = [r, 255].min,
+#              [g, 255].min,
+#              [b, 255].min
+#
+#    rgba.replace [r, g, b, 255]
+#end
 
-    r += ((255 - r) * conversion_factor).round
-    g += ((255 - g) * conversion_factor).round
-    b += ((255 - b) * conversion_factor).round
-
-    r, g, b = [r, 255].min,
-              [g, 255].min,
-              [b, 255].min
-
-    rgba.replace [r, g, b, 255]
-end
-
-coörd_string = "module.exports = #{JSON.dump coörds}"
-IO.write 'co-ords_img.js', coörd_string
+#coörd_string = "module.exports = #{JSON.dump coörds}"
+#IO.write 'co-ords_img.js', coörd_string
 
